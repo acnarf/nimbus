@@ -1514,5 +1514,73 @@ window.addEventListener('load', function(){
 });
 </script>
 
+<!-- Nimbus boş harita alanı seçim temizleme patch'i -->
+<script>
+(function(){
+  function applyEmptyAreaClearPatch(){
+    const wrap = document.querySelector('.mapWrap');
+    if(!wrap || wrap.dataset.emptyAreaPatch === '1') return;
+    wrap.dataset.emptyAreaPatch = '1';
+
+    function clickedOnProvinceOrLabel(ev){
+      const items = document.elementsFromPoint(ev.clientX, ev.clientY);
+      for(const item of items){
+        if(!wrap.contains(item)) continue;
+        if(item.closest && item.closest('g[data-iladi]')) return true;
+        if(item.closest && item.closest('#provinceLabels')) return true;
+        if(item.closest && item.closest('.dealerBadge')) return true;
+      }
+      return false;
+    }
+
+    function clearSelection(){
+      try{
+        selectedProvince = null;
+
+        const dealerPanelTitle = document.getElementById('dealerPanelTitle');
+        if(dealerPanelTitle) dealerPanelTitle.textContent = 'Seçili İldeki Bayiler';
+
+        if(window.provinceTitle) provinceTitle.textContent = 'İl seçilmedi';
+        if(window.selectedInfo) selectedInfo.textContent = 'Haritadan bir il seç.';
+        if(window.mapHint) mapHint.textContent = 'İl sınırına veya il adına tıkla.';
+        if(window.dealerCount) dealerCount.textContent = '0 kayıt';
+
+        const dealerListEl = document.getElementById('dealerList');
+        if(dealerListEl){
+          dealerListEl.innerHTML = '<div class="emptyState">İl seçildiğinde bayi listesi burada görünür.</div>';
+        }
+
+        if(typeof renderMapColors === 'function') renderMapColors();
+        if(typeof renderProvinceSummary === 'function') renderProvinceSummary();
+        if(typeof setSummaryTab === 'function') setSummaryTab('general');
+      }catch(err){
+        console.error('Seçim temizleme hatası:', err);
+      }
+    }
+
+    function onEmptyPointer(ev){
+      try{
+        const rect = wrap.getBoundingClientRect();
+        const inside = ev.clientX >= rect.left && ev.clientX <= rect.right && ev.clientY >= rect.top && ev.clientY <= rect.bottom;
+        if(!inside) return;
+
+        if(clickedOnProvinceOrLabel(ev)) return;
+
+        clearSelection();
+      }catch(err){
+        console.error(err);
+      }
+    }
+
+    wrap.addEventListener('pointerup', onEmptyPointer, true);
+    wrap.addEventListener('click', onEmptyPointer, true);
+  }
+
+  document.addEventListener('DOMContentLoaded', applyEmptyAreaClearPatch);
+  window.addEventListener('load', applyEmptyAreaClearPatch);
+  setTimeout(applyEmptyAreaClearPatch, 1000);
+})();
+</script>
+  
 </body>
 </html>
