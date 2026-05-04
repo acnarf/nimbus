@@ -276,7 +276,7 @@ body.authReady main{
       <h1>Nimbus Gıda Yurtiçi Bayi Haritası</h1>
     </div>
   </div>
-  <div class="toolbar"><span class="userBadge hidden" id="userBadge"></span><span class="readOnlyNotice" id="readOnlyNotice">Sadece görüntüleme</span><button class="btn small hidden" id="signOutBtn">Çıkış</button><input id="globalSearch" class="search" placeholder="İl veya bayi ara..."><button class="btn" id="exportBtn">Dışa Aktar</button><label class="btn" for="importFile">İçe Aktar</label><input id="importFile" type="file" accept="application/json" class="hidden"><button class="btn danger" id="clearBtn">Temizle</button></div>
+  <div class="toolbar"><span class="userBadge hidden" id="userBadge"></span><span class="readOnlyNotice" id="readOnlyNotice">Sadece görüntüleme</span><input id="globalSearch" class="search" placeholder="İl veya bayi ara..."><button class="btn small hidden" id="signOutBtn">Çıkış</button></div>
 </header>
 <main>
   <section class="card mapCard">
@@ -478,7 +478,7 @@ function updateEditAccessUI(){
   if(window.readOnlyNotice) readOnlyNotice.classList.toggle('show',readOnly);
 
   // Düzenleme aksiyonlarını görsel olarak pasifleştir.
-  [addDealerBtn, clearBtn].forEach(btn=>{
+  [window.addDealerBtn, window.clearBtn].forEach(btn=>{
     if(!btn) return;
     btn.disabled=readOnly;
     btn.classList.toggle('disabled',readOnly);
