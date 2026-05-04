@@ -1,0 +1,393 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Nimbus Gıda Yurtiçi Bayi Haritası</title>
+<style>
+:root{
+  --bg:#f4f7fb; --card:#fff; --text:#172033; --muted:#667085; --line:#e5e9f0;
+  --blue:#1f6feb; --shadow:0 18px 45px rgba(16,24,40,.08);
+  --empty:#d9dee7; --active:#22c55e; --potential:#f59e0b; --risk:#ef4444; --closed:#64748b;
+}
+*{box-sizing:border-box}
+body{margin:0;background:linear-gradient(180deg,#f8fafc,#edf2f8);font-family:Inter,Segoe UI,Arial,sans-serif;color:var(--text)}
+header{padding:22px 28px 12px;display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap}
+h1{margin:0;font-size:26px;letter-spacing:-.04em}.subtitle{margin:6px 0 0;color:var(--muted);font-size:14px}
+.toolbar{display:flex;gap:10px;flex-wrap:wrap}.btn,input,select,textarea{font:inherit}
+.btn{border:1px solid var(--line);background:#fff;color:#172033;padding:10px 13px;border-radius:12px;cursor:pointer;box-shadow:0 1px 2px rgba(16,24,40,.04);user-select:none}
+.btn:hover{border-color:#c7d7ef;transform:translateY(-1px)}.btn.primary{background:var(--blue);border-color:var(--blue);color:white}.btn.danger{color:#b42318}.btn.small{padding:7px 10px;border-radius:10px;font-size:13px}
+.search{min-width:250px;border:1px solid var(--line);background:white;padding:11px 13px;border-radius:13px;outline:none}
+.search:focus,input:focus,select:focus,textarea:focus{border-color:#9cc3ff;box-shadow:0 0 0 4px rgba(31,111,235,.11)}
+main{padding:0 28px 28px;display:grid;grid-template-columns:minmax(760px,1fr) 420px;gap:18px}
+.card{background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:22px;box-shadow:var(--shadow);overflow:hidden}
+.mapCard{min-height:690px}.mapTop{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;gap:10px;align-items:center;flex-wrap:wrap}
+.legend{display:flex;gap:8px;flex-wrap:wrap}.pill{display:inline-flex;gap:6px;align-items:center;font-size:12px;color:#475467;background:#f8fafc;border:1px solid var(--line);padding:6px 9px;border-radius:999px}.dot{width:10px;height:10px;border-radius:50%}
+.mapWrap{position:relative;min-height:640px;background:radial-gradient(circle at 50% 35%,#fff 0,#eef4fb 78%);padding:18px}
+.mapStage{width:100%;height:590px;display:flex;align-items:center;justify-content:center;overflow:hidden}
+.mapStage svg{width:100%;height:100%;max-height:590px;display:block}
+#turkiye g[data-iladi], #turkiye g[data-iladi] path{cursor:pointer;transition:fill .15s ease, stroke .15s ease, opacity .15s ease}
+#turkiye g[data-iladi] path{stroke:#fff;stroke-width:1.15;fill:var(--empty)}
+#turkiye g[data-iladi]:hover path{stroke:var(--blue);stroke-width:1.8}
+#provinceLabels text.provinceName{font-size:9px;font-weight:900;fill:#111827;paint-order:stroke;stroke:#fff;stroke-width:3px;stroke-linejoin:round;cursor:pointer;user-select:none;dominant-baseline:middle;text-anchor:middle}
+#provinceLabels text.provinceName:hover{fill:var(--blue)}
+#provinceLabels circle.dealerBadge{fill:#1f6feb;stroke:#fff;stroke-width:1.4;cursor:pointer}
+#provinceLabels text.dealerBadgeText{font-size:8.8px;font-weight:900;fill:#fff;dominant-baseline:middle;text-anchor:middle;pointer-events:none;stroke:none;paint-order:normal}
+.mapHint{position:absolute;left:16px;bottom:16px;background:rgba(255,255,255,.94);border:1px solid var(--line);border-radius:14px;padding:9px 12px;color:#667085;font-size:12px;backdrop-filter:blur(6px)}
+.mapError{position:absolute;inset:20px;z-index:5;display:none;align-items:center;justify-content:center;text-align:center;padding:28px;border:1px dashed #cfd6e2;border-radius:18px;background:rgba(255,255,255,.96);color:#667085}
+.loading{color:#667085;font-weight:700}
+aside{display:flex;flex-direction:column;gap:18px}.panel{padding:18px}.panel h2{font-size:19px;margin:0 0 4px;letter-spacing:-.03em}.selectedTxt{color:var(--muted);font-size:13px;margin-bottom:16px}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:10px}.field{display:flex;flex-direction:column;gap:6px;margin-bottom:10px}.field.full{grid-column:1/-1}label{font-size:12px;font-weight:800;color:#475467}
+input,select,textarea{border:1px solid var(--line);background:#fff;color:#172033;border-radius:12px;padding:10px 11px;outline:none}textarea{min-height:78px;resize:vertical}
+.dealerList{display:flex;flex-direction:column;gap:10px;max-height:345px;overflow:auto}.dealer{border:1px solid var(--line);border-radius:16px;padding:12px;background:#fbfcfe}.dealerTop{display:flex;justify-content:space-between;gap:10px}.dealerName{font-weight:800}.dealerMeta{font-size:13px;color:#667085;line-height:1.45;margin-top:4px}.emptyState{padding:18px;border:1px dashed #cfd6e2;border-radius:16px;text-align:center;color:#667085;background:#fbfcfe}.hidden{display:none!important}
+.summary{grid-column:1/-1;padding:18px}.summaryTop{display:flex;justify-content:space-between;gap:14px;align-items:center;flex-wrap:wrap;margin-bottom:12px}.summary h2{font-size:20px;margin:0}.muted{color:var(--muted)}
+.summaryTabs{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.tabBtn{border:1px solid var(--line);background:#f8fafc;color:#475467;padding:10px 14px;border-radius:12px;font-weight:800;cursor:pointer}
+.tabBtn.active{background:#fff;color:#172033;border-color:#cfd8e6;box-shadow:0 2px 10px rgba(16,24,40,.06)}
+.tabPane{display:none}
+.tabPane.active{display:block}
+.provinceSummaryHead{display:flex;justify-content:space-between;gap:14px;align-items:flex-start;flex-wrap:wrap;margin-bottom:14px}
+.provinceSummaryTitle{font-size:18px;font-weight:800}
+.provinceSummaryList{display:flex;flex-direction:column;gap:10px}
+.stats{display:grid;grid-template-columns:repeat(5,minmax(120px,1fr));gap:10px;margin-bottom:14px}.stat{background:#f8fafc;border:1px solid var(--line);border-radius:16px;padding:12px}.stat b{font-size:22px}.stat span{display:block;color:#667085;font-size:12px;margin-top:3px}
+.tableWrap{overflow:auto;border:1px solid var(--line);border-radius:16px}table{width:100%;border-collapse:collapse;background:#fff}th,td{text-align:left;padding:12px;border-bottom:1px solid var(--line);font-size:13px;vertical-align:top}th{background:#f8fafc;color:#475467;font-size:12px;text-transform:uppercase;letter-spacing:.04em}.colorCell{width:12px;height:12px;border-radius:4px;display:inline-block;margin-right:8px;vertical-align:-2px}
+@media(max-width:1160px){main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:680px){header,main{padding-left:14px;padding-right:14px}.mapWrap{min-height:470px}.mapStage{height:430px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.search{width:100%;min-width:100%}#provinceLabels text.provinceName{font-size:8px}#provinceLabels text.dealerBadgeText{font-size:8px}}
+</style>
+</head>
+<body>
+<header>
+  <div><h1>Yurtiçi Bayi Haritası</h1></div>
+  <div class="toolbar"><input id="globalSearch" class="search" placeholder="İl veya bayi ara..."><button class="btn" id="exportBtn">Dışa Aktar</button><label class="btn" for="importFile">İçe Aktar</label><input id="importFile" type="file" accept="application/json" class="hidden"><button class="btn danger" id="clearBtn">Temizle</button></div>
+</header>
+<main>
+  <section class="card mapCard">
+    <div class="mapTop"><strong>Türkiye Haritası</strong><div class="legend" id="legend"></div></div>
+    <div class="mapWrap">
+      <div class="mapStage" id="mapStage"><div class="loading">Harita yükleniyor...</div></div>
+      <div class="mapHint" id="mapHint">İl sınırına veya il adına tıkla.</div>
+      <div class="mapError" id="mapError"><div><strong>Harita yüklenemedi.</strong><br><br>Bu sürüm SVG haritayı internetten alır. Dosyayı internet bağlıyken aç.</div></div>
+    </div>
+  </section>
+  <aside>
+    <section class="card panel">
+      <h2 id="provinceTitle">İl seçilmedi</h2><div class="selectedTxt" id="selectedInfo">Haritadan bir il seç.</div>
+      <select id="statusSelect" class="hidden"></select>
+      <div class="grid">
+        <div class="field"><label>Bayi Adı</label><input id="dealerName" placeholder="Örn. ABC Gıda"></div>
+        <div class="field"><label>İlçe / Bölge</label><input id="dealerDistrict" placeholder="Örn. Kadıköy"></div>
+        <div class="field"><label>Yetkili</label><input id="dealerPerson" placeholder="Ad Soyad"></div>
+        <div class="field"><label>Telefon</label><input id="dealerPhone" placeholder="05xx xxx xx xx"></div>
+        <div class="field full"><label>Adres</label><input id="dealerAddress" placeholder="Kısa adres bilgisi"></div>
+        <div class="field full"><label>Not</label><textarea id="dealerNote" placeholder="Teslimat, ödeme, potansiyel, ziyaret notu..."></textarea></div>
+      </div>
+      <button class="btn primary" id="addDealerBtn">Bayiyi Kaydet</button>
+    </section>
+    <section class="card panel"><h2>Seçili İldeki Bayiler</h2><div class="selectedTxt" id="dealerCount">0 kayıt</div><div class="dealerList" id="dealerList"></div></section>
+  </aside>
+  <section class="card summary">
+    <div class="summaryTop">
+      <div class="summaryTabs">
+        <button class="tabBtn active" id="generalTabBtn" data-tab="general">Genel Özet</button>
+        <button class="tabBtn" id="provinceTabBtn" data-tab="province">İl Özeti</button>
+      </div>
+      <span class="muted" id="lastSave">Henüz kayıt yok</span>
+    </div>
+
+    <div class="tabPane active" id="generalTabPane">
+      <div class="stats" id="stats"></div>
+      <div class="tableWrap"><table><thead><tr><th>Durum</th><th>İl</th><th>Bayi</th><th>İlçe</th><th>Yetkili</th><th>Telefon</th><th>Adres / Not</th></tr></thead><tbody id="summaryBody"></tbody></table></div>
+    </div>
+
+    <div class="tabPane" id="provinceTabPane">
+      <div class="provinceSummaryHead">
+        <div>
+          <div class="provinceSummaryTitle" id="provinceSummaryTitle">İl seçilmedi</div>
+          <div class="muted" id="provinceSummaryMeta">Haritadan bir il seçildiğinde o ile ait bayi özeti burada görünür.</div>
+        </div>
+      </div>
+      <div class="tableWrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Bayi</th>
+              <th>İlçe</th>
+              <th>Yetkili</th>
+              <th>Telefon</th>
+              <th>Adres / Not</th>
+            </tr>
+          </thead>
+          <tbody id="provinceSummaryBody"></tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+</main>
+<script>
+const STORAGE_KEY='yurticiBayiHaritasi_svgStable_v1';
+const STATUS=[{key:'empty',label:'Bayi Yok',color:'#d9dee7'},{key:'hasDealer',label:'Bayi Var',color:'#22c55e'}];
+const SVG_SOURCES=['https://cdn.jsdelivr.net/gh/dnomak/svg-turkiye-haritasi@master/index.html','https://raw.githubusercontent.com/dnomak/svg-turkiye-haritasi/master/index.html'];
+let data=loadData(), selectedProvince=null, svgEl=null, provinceMap=new Map();
+
+function loadData(){try{return JSON.parse(localStorage.getItem(STORAGE_KEY))||{provinces:{},updatedAt:null}}catch(e){return{provinces:{},updatedAt:null}}}
+function saveData(){data.updatedAt=new Date().toISOString();localStorage.setItem(STORAGE_KEY,JSON.stringify(data));renderAll()}
+function provinceData(name){if(!data.provinces[name])data.provinces[name]={status:'empty',dealers:[]};return data.provinces[name]}
+function statusObj(k){return STATUS.find(s=>s.key===k)||STATUS[0]}
+function esc(s){return(s||'').toString().replace(/[&<>'"]/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[m]))}
+function norm(s){return(s||'').toString().toLocaleLowerCase('tr-TR').normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/ı/g,'i')}
+
+async function loadSvgText(){
+  let err;
+  for(const url of SVG_SOURCES){
+    try{
+      const r=await fetch(url,{cache:'force-cache'});
+      if(!r.ok) throw new Error(r.status);
+      return await r.text();
+    }catch(e){err=e}
+  }
+  throw err || new Error('SVG yok');
+}
+
+function renderLegend(){legend.innerHTML=STATUS.map(s=>`<span class="pill"><i class="dot" style="background:${s.color}"></i>${s.label}</span>`).join('')}
+function renderStatusSelect(){statusSelect.innerHTML=STATUS.map(s=>`<option value="${s.key}">${s.label}</option>`).join('')}
+
+async function initMap(){
+  try{
+    const html=await loadSvgText();
+    const doc=new DOMParser().parseFromString(html,'text/html');
+    const svg=doc.querySelector('#svg-turkiye-haritasi');
+    if(!svg) throw new Error('SVG bulunamadı');
+
+    svgEl=svg;
+    svgEl.removeAttribute('width'); svgEl.removeAttribute('height');
+    svgEl.setAttribute('preserveAspectRatio','xMidYMid meet');
+    mapStage.innerHTML='';
+    mapStage.appendChild(svgEl);
+
+    setupProvinces();
+    createProvinceLabels();
+    renderMapColors();
+  }catch(e){
+    mapError.style.display='flex';
+  }
+}
+
+function setupProvinces(){
+  provinceMap.clear();
+  const groups=[...svgEl.querySelectorAll('g[data-iladi]')];
+
+  groups.forEach(g=>{
+    const name=g.getAttribute('data-iladi');
+    if(!provinceMap.has(name)) provinceMap.set(name,[]);
+    provinceMap.get(name).push(g);
+
+    g.addEventListener('click',ev=>{ev.stopPropagation(); selectProvince(name)});
+    g.addEventListener('mouseenter',()=>setProvinceStroke(name,'#1f6feb',1.8));
+    g.addEventListener('mouseleave',()=>renderMapColors());
+  });
+}
+
+function getCombinedBBox(groups){
+  let box=null;
+  groups.forEach(g=>{
+    try{
+      const b=g.getBBox();
+      if(!box) box={x:b.x,y:b.y,x2:b.x+b.width,y2:b.y+b.height};
+      else{box.x=Math.min(box.x,b.x);box.y=Math.min(box.y,b.y);box.x2=Math.max(box.x2,b.x+b.width);box.y2=Math.max(box.y2,b.y+b.height)}
+    }catch(e){}
+  });
+  return box;
+}
+
+function createProvinceLabels(){
+  const old=svgEl.querySelector('#provinceLabels'); if(old) old.remove();
+  const ns='http://www.w3.org/2000/svg';
+  const labelLayer=document.createElementNS(ns,'g');
+  labelLayer.setAttribute('id','provinceLabels');
+  svgEl.appendChild(labelLayer);
+
+  provinceMap.forEach((groups,name)=>{
+    const b=getCombinedBBox(groups);
+    if(!b) return;
+
+    const x=(b.x+(b.x2-b.x)/2);
+    const y=(b.y+(b.y2-b.y)/2);
+
+    const wrap=document.createElementNS(ns,'g');
+    wrap.setAttribute('data-label-group',name);
+    wrap.style.cursor='pointer';
+
+    const text=document.createElementNS(ns,'text');
+    text.textContent=name;
+    text.setAttribute('x',x.toFixed(1));
+    text.setAttribute('y',(y+5).toFixed(1));
+    text.setAttribute('class','provinceName');
+    text.dataset.province=name;
+
+    const badge=document.createElementNS(ns,'circle');
+    badge.setAttribute('class','dealerBadge');
+    badge.setAttribute('r','7.4');
+    badge.dataset.province=name;
+    badge.style.display='none';
+
+    const badgeText=document.createElementNS(ns,'text');
+    badgeText.setAttribute('class','dealerBadgeText');
+    badgeText.dataset.province=name;
+    badgeText.style.display='none';
+
+    wrap.appendChild(text);
+    wrap.appendChild(badge);
+    wrap.appendChild(badgeText);
+    labelLayer.appendChild(wrap);
+
+    // Text uzunluğunu SVG render edildikten sonra ölçüp rozeti ismin sağ yanına koy.
+    requestAnimationFrame(()=>positionDealerBadge(name));
+
+    wrap.addEventListener('click',ev=>{ev.stopPropagation();selectProvince(name)});
+    wrap.addEventListener('mouseenter',()=>setProvinceStroke(name,'#1f6feb',1.8));
+    wrap.addEventListener('mouseleave',()=>renderMapColors());
+  });
+}
+
+function positionDealerBadge(name){
+  if(!svgEl) return;
+  const group=svgEl.querySelector(`#provinceLabels g[data-label-group="${cssEscape(name)}"]`);
+  if(!group) return;
+
+  const text=group.querySelector('text.provinceName');
+  const badge=group.querySelector('circle.dealerBadge');
+  const badgeText=group.querySelector('text.dealerBadgeText');
+  if(!text || !badge || !badgeText) return;
+
+  let box;
+  try{ box=text.getBBox(); }catch(e){ return; }
+
+  const count=(provinceData(name).dealers||[]).length;
+
+  // Rozeti il adının sağına değil, üstüne ve merkeze yerleştir.
+  const x=box.x + (box.width/2);
+  const y=box.y - 7;
+
+  badge.setAttribute('cx',x.toFixed(1));
+  badge.setAttribute('cy',y.toFixed(1));
+  badgeText.setAttribute('x',x.toFixed(1));
+  badgeText.setAttribute('y',y.toFixed(1));
+  badgeText.textContent=count;
+
+  const visible=count>0;
+  badge.style.display=visible?'':'none';
+  badgeText.style.display=visible?'':'none';
+}
+
+function cssEscape(value){
+  if(window.CSS && CSS.escape) return CSS.escape(value);
+  return value.replace(/["\\]/g,'\\$&');
+}
+
+function setProvinceFill(name,color){
+  (provinceMap.get(name)||[]).forEach(g=>g.querySelectorAll('path, polygon').forEach(p=>p.style.fill=color));
+}
+function setProvinceStroke(name,color,width){
+  (provinceMap.get(name)||[]).forEach(g=>g.querySelectorAll('path, polygon').forEach(p=>{p.style.stroke=color;p.style.strokeWidth=width}));
+}
+function renderMapColors(){
+  if(!svgEl) return;
+  provinceMap.forEach((groups,name)=>{
+    const pd=data.provinces[name];
+    const selected=selectedProvince===name;
+    groups.forEach(g=>g.querySelectorAll('path, polygon').forEach(p=>{
+      p.style.fill=statusObj(pd?.status).color;
+      p.style.stroke=selected?'#1f6feb':'#fff';
+      p.style.strokeWidth=selected?'2.2':'1.15';
+    }));
+  });
+  svgEl.querySelectorAll('#provinceLabels text.provinceName').forEach(t=>{
+    t.style.fill=t.dataset.province===selectedProvince?'#1f6feb':'#111827';
+    t.style.fontSize=t.dataset.province===selectedProvince?'10px':'9px';
+  });
+  provinceMap.forEach((groups,name)=>positionDealerBadge(name));
+}
+
+function selectProvince(name){
+  selectedProvince=name;
+  provinceData(name);
+  provinceTitle.textContent=name;
+  selectedInfo.textContent='Bu il için bayi bilgisi ekleyebilirsin.';
+  mapHint.textContent='Seçili il: '+name;
+  statusSelect.value=provinceData(name).status;
+  renderMapColors();
+  renderDealers();
+  renderProvinceSummary();
+  setSummaryTab('province');
+}
+
+function v(id){return document.getElementById(id).value.trim()}
+function clearDealerForm(){['dealerName','dealerDistrict','dealerPerson','dealerPhone','dealerAddress','dealerNote'].forEach(id=>document.getElementById(id).value='')}
+function addDealer(){
+  if(!selectedProvince){alert('Önce haritadan bir il seç.');return}
+  const d={id:Date.now().toString(36)+Math.random().toString(36).slice(2),name:v('dealerName'),district:v('dealerDistrict'),person:v('dealerPerson'),phone:v('dealerPhone'),address:v('dealerAddress'),note:v('dealerNote'),createdAt:new Date().toISOString()};
+  if(!d.name){alert('Bayi adı girmen gerekiyor.');return}
+  const p=provinceData(selectedProvince); p.dealers.push(d); p.status='hasDealer';
+  clearDealerForm(); statusSelect.value=p.status; saveData();
+}
+function removeDealer(id){const p=provinceData(selectedProvince);p.dealers=p.dealers.filter(d=>d.id!==id);if(p.dealers.length===0)p.status='empty';saveData()}
+function renderDealers(){
+  const box=dealerList;
+  if(!selectedProvince){box.innerHTML='<div class="emptyState">İl seçildiğinde bayi listesi burada görünür.</div>';dealerCount.textContent='0 kayıt';return}
+  const arr=provinceData(selectedProvince).dealers; dealerCount.textContent=arr.length+' kayıt';
+  box.innerHTML=arr.length?arr.map(d=>`<div class="dealer"><div class="dealerTop"><div><div class="dealerName">${esc(d.name)}</div><div class="dealerMeta">${esc(d.district||'-')} · ${esc(d.person||'-')} · ${esc(d.phone||'-')}</div></div><button class="btn small danger" data-remove="${d.id}">Sil</button></div><div class="dealerMeta">${esc(d.address||'Adres yok')}${d.note?' · '+esc(d.note):''}</div></div>`).join(''):'<div class="emptyState">Bu ilde bayi kaydı yok.</div>'
+}
+function renderStats(){
+  const ps=Object.entries(data.provinces);
+  const dealerTotal=ps.reduce((a,[,p])=>a+(p.dealers?.length||0),0);
+  const cityTotal=ps.filter(([,p])=>(p.dealers?.length||0)>0).length;
+  stats.innerHTML=`<div class="stat"><b>${dealerTotal}</b><span>Toplam bayi</span></div><div class="stat"><b>${cityTotal}</b><span>Bayisi olan il</span></div>`;
+}
+function renderSummary(){
+  const q=norm(globalSearch.value);const rows=[];
+  Object.entries(data.provinces).forEach(([province,p])=>(p.dealers||[]).forEach(d=>{const hay=norm([province,d.name,d.district,d.person,d.phone,d.address,d.note].join(' '));if(!q||hay.includes(q))rows.push({province,p,d})}));
+  summaryBody.innerHTML=rows.length?rows.map(({province,p,d})=>`<tr><td><span class="colorCell" style="background:${statusObj(p.status).color}"></span>${statusObj(p.status).label}</td><td><button class="btn small" data-province="${province}">${province}</button></td><td><strong>${esc(d.name)}</strong></td><td>${esc(d.district||'-')}</td><td>${esc(d.person||'-')}</td><td>${esc(d.phone||'-')}</td><td>${esc(d.address||'')}${d.note?'<br><span class="muted">'+esc(d.note)+'</span>':''}</td></tr>`).join(''):'<tr><td colspan="7" class="muted">Kayıt bulunamadı.</td></tr>';
+  lastSave.textContent=data.updatedAt?'Son kayıt: '+new Date(data.updatedAt).toLocaleString('tr-TR'):'Henüz kayıt yok'
+}
+
+function renderProvinceSummary(){
+  if(!selectedProvince){
+    provinceSummaryTitle.textContent='İl seçilmedi';
+    provinceSummaryMeta.textContent='Haritadan bir il seçildiğinde o ile ait bayi özeti burada görünür.';
+    provinceSummaryBody.innerHTML='<tr><td colspan="5" class="muted">Henüz il seçilmedi.</td></tr>';
+    return;
+  }
+
+  const p=provinceData(selectedProvince);
+  const dealers=p.dealers||[];
+  provinceSummaryTitle.textContent=selectedProvince;
+  provinceSummaryMeta.textContent=dealers.length+' bayi kaydı';
+
+  provinceSummaryBody.innerHTML=dealers.length
+    ? dealers.map(d=>`<tr><td><strong>${esc(d.name)}</strong></td><td>${esc(d.district||'-')}</td><td>${esc(d.person||'-')}</td><td>${esc(d.phone||'-')}</td><td>${esc(d.address||'')}${d.note?'<br><span class="muted">'+esc(d.note)+'</span>':''}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Bu ilde bayi kaydı yok.</td></tr>';
+}
+
+function setSummaryTab(tab){
+  generalTabBtn.classList.toggle('active',tab==='general');
+  provinceTabBtn.classList.toggle('active',tab==='province');
+  generalTabPane.classList.toggle('active',tab==='general');
+  provinceTabPane.classList.toggle('active',tab==='province');
+}
+
+function renderAll(){renderMapColors();renderStats();renderSummary();renderDealers();renderProvinceSummary()}
+function bindEvents(){
+  addDealerBtn.onclick=addDealer;
+  generalTabBtn.onclick=()=>setSummaryTab('general');
+  provinceTabBtn.onclick=()=>setSummaryTab('province');
+  statusSelect.onchange=e=>{if(!selectedProvince){alert('Önce bir il seç.');e.target.value='empty';return}provinceData(selectedProvince).status=e.target.value;saveData()};
+  dealerList.onclick=e=>{const id=e.target.dataset.remove;if(id)removeDealer(id)};
+  summaryBody.onclick=e=>{const p=e.target.dataset.province;if(p)selectProvince(p)};
+  globalSearch.oninput=()=>{renderSummary();const q=norm(globalSearch.value);if(q&&provinceMap.size){const match=[...provinceMap.keys()].find(name=>norm(name).includes(q));if(match)selectProvince(match)}};
+  exportBtn.onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='yurtici-bayi-haritasi-verileri.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
+  importFile.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const im=JSON.parse(r.result);if(!im.provinces)throw new Error();data=im;saveData();setSummaryTab('general');alert('Veriler içe aktarıldı.')}catch(err){alert('JSON dosyası okunamadı.')}};r.readAsText(f)};
+  clearBtn.onclick=()=>{if(confirm('Tüm bayi ve renk kayıtları silinsin mi?')){data={provinces:{},updatedAt:null};localStorage.removeItem(STORAGE_KEY);selectedProvince=null;provinceTitle.textContent='İl seçilmedi';selectedInfo.textContent='Haritadan bir il seç.';mapHint.textContent='İl sınırına veya il adına tıkla.';renderAll();setSummaryTab('general')}}
+}
+renderLegend();renderStatusSelect();bindEvents();renderAll();setSummaryTab('general');initMap();
+</script>
+</body>
+</html>
