@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Nimbus Gıda</string>
+    <string name="launch_url">https://nimbus-bayi-haritasi.firebaseapp.com/?app=twa</string>
+    <string name="host_name">nimbus-bayi-haritasi.firebaseapp.com</string>
+    <string name="asset_statements">[{\"relation\":[\"delegate_permission/common.handle_all_urls\"],\"target\":{\"namespace\":\"web\",\"site\":\"https://nimbus-bayi-haritasi.firebaseapp.com\"}}]</string>
+</resources>
