@@ -349,7 +349,9 @@ body.authReady main{
 <script>
 window.NIMBUS_FIREBASE_CONFIG = {
   apiKey: "AIzaSyCEZU1EPu1RVhkfMeKTwsvAWTD-B8BjwQA",
-  authDomain: "nimbus-bayi-haritasi.firebaseapp.com",
+  authDomain: (location.hostname === "nimbus-bayi-haritasi.web.app" || location.hostname === "nimbus-bayi-haritasi.firebaseapp.com")
+    ? location.hostname
+    : "nimbus-bayi-haritasi.firebaseapp.com",
   projectId: "nimbus-bayi-haritasi",
   storageBucket: "nimbus-bayi-haritasi.firebasestorage.app",
   messagingSenderId: "979034131958",
@@ -386,7 +388,7 @@ window.nimbusGoogleLogin = function(ev){
     var auth = firebase.auth();
     var provider = new firebase.auth.GoogleAuthProvider();
 
-    // Firebase Hosting üzerinde redirect yöntemi kullanıyoruz.
+    // Aynı Firebase Hosting domaininde redirect kullanıyoruz.
     auth.signInWithRedirect(provider).catch(function(err){
       console.error(err);
       showError('Google giriş başlatılamadı: ' + (err.code || err.message || 'Bilinmeyen hata'));
@@ -406,7 +408,9 @@ const STORAGE_KEY='yurticiBayiHaritasi_svgStable_v1';
 const STATUS=[{key:'empty',label:'Bayi Yok',color:'#d9dee7'},{key:'hasDealer',label:'Bayi Var',color:'#22c55e'}];
 const firebaseConfig = {
   apiKey: "AIzaSyCEZU1EPu1RVhkfMeKTwsvAWTD-B8BjwQA",
-  authDomain: "nimbus-bayi-haritasi.firebaseapp.com",
+  authDomain: (location.hostname === "nimbus-bayi-haritasi.web.app" || location.hostname === "nimbus-bayi-haritasi.firebaseapp.com")
+    ? location.hostname
+    : "nimbus-bayi-haritasi.firebaseapp.com",
   projectId: "nimbus-bayi-haritasi",
   storageBucket: "nimbus-bayi-haritasi.firebasestorage.app",
   messagingSenderId: "979034131958",
