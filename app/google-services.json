@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "979034131958",
+    "project_id": "nimbus-bayi-haritasi",
+    "storage_bucket": "nimbus-bayi-haritasi.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:979034131958:android:95b31d724b451e37e80bd7",
+        "android_client_info": {
+          "package_name": "com.nimbusgida.bayiharitasi"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "979034131958-rpmvf4uto90h2iae0bv6pm1rlcbdk3gs.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.nimbusgida.bayiharitasi",
+            "certificate_hash": "9e26d78b333c5c58a32c75bea3dfd965e51de00c"
+          }
+        },
+        {
+          "client_id": "979034131958-vh35hm2lkkv18hhkdeg81dsfpdc9emrm.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCcdph-SKvxKsaGWQtfpWymZXBfTEuqzBw"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "979034131958-vh35hm2lkkv18hhkdeg81dsfpdc9emrm.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
