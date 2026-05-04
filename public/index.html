@@ -456,7 +456,12 @@ let firebaseApp=null, firebaseAuth=null, firestoreDb=null, currentUser=null, uns
 let remoteReady=false, applyingRemoteData=false, saveTimer=null;
 const COMPANY_DOC_PATH='companyData/bayiHaritasi';
 
-const SVG_SOURCES=['https://cdn.jsdelivr.net/gh/dnomak/svg-turkiye-haritasi@master/index.html','https://raw.githubusercontent.com/dnomak/svg-turkiye-haritasi/master/index.html'];
+const SVG_SOURCES=[
+  'https://cdn.jsdelivr.net/gh/dnomak/svg-turkiye-haritasi@master/index.html',
+  'https://cdn.jsdelivr.net/gh/dnomak/svg-turkiye-haritasi/index.html',
+  'https://rawcdn.githack.com/dnomak/svg-turkiye-haritasi/master/index.html',
+  'https://raw.githubusercontent.com/dnomak/svg-turkiye-haritasi/master/index.html'
+];
 let data=loadData(), selectedProvince=null, svgEl=null, provinceMap=new Map();
 
 // Harita içi zoom/pan: CSS scale değil SVG viewBox kullanır, bu yüzden büyüyünce bulanıklaşmaz.
@@ -690,14 +695,30 @@ function initFirebaseOnline(){
   }
 }
 
+async function fetchWithTimeout(url,ms=6500){
+  const controller=new AbortController();
+  const timer=setTimeout(()=>controller.abort(),ms);
+  try{
+    const r=await fetch(url,{cache:'no-store',mode:'cors',signal:controller.signal});
+    if(!r.ok) throw new Error('HTTP '+r.status);
+    return await r.text();
+  }finally{
+    clearTimeout(timer);
+  }
+}
+
 async function loadSvgText(){
   let err;
   for(const url of SVG_SOURCES){
     try{
-      const r=await fetch(url,{cache:'force-cache'});
-      if(!r.ok) throw new Error(r.status);
-      return await r.text();
-    }catch(e){err=e}
+      const txt=await fetchWithTimeout(url);
+      if(txt && txt.includes('svg-turkiye-haritasi')) return txt;
+      if(txt && txt.includes('<svg')) return txt;
+      throw new Error('SVG içerik bulunamadı');
+    }catch(e){
+      console.warn('Harita kaynağı yüklenemedi:',url,e);
+      err=e;
+    }
   }
   throw err || new Error('SVG yok');
 }
@@ -985,7 +1006,10 @@ async function initMap(){
       }
     },600);
   }catch(e){
+    console.error('Harita yüklenemedi:',e);
+    mapStage.innerHTML='';
     mapError.style.display='flex';
+    mapError.innerHTML='<div><strong>Harita yüklenemedi.</strong><br><br>İnternet bağlantısını kontrol edip sayfayı yenile. Harita kaynağı geçici olarak erişilemiyor olabilir.</div>';
   }
 }
 
