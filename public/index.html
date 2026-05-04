@@ -1151,7 +1151,42 @@ function renderMapColors(){
     t.style.fontSize=t.dataset.province===selectedProvince?'10px':'9px';
   });
   provinceMap.forEach((groups,name)=>positionDealerBadge(name));
+  highlightSearchMatches();
 }
+
+
+function provinceMatchesSearch(name){
+  const searchInput=document.getElementById('globalSearch');
+  const q=norm(searchInput ? searchInput.value : '');
+  if(!q) return false;
+  if(norm(name).includes(q)) return true;
+  const p=data.provinces[name];
+  return !!(p && (p.dealers||[]).some(d=>norm([name,d.name,d.district,d.person,d.phone,d.address,d.note].join(' ')).includes(q)));
+}
+
+function highlightSearchMatches(){
+  if(!svgEl) return;
+  const searchInput=document.getElementById('globalSearch');
+  const q=norm(searchInput ? searchInput.value : '');
+  if(!q) return;
+
+  provinceMap.forEach((groups,name)=>{
+    if(!provinceMatchesSearch(name)) return;
+    groups.forEach(g=>g.querySelectorAll('path, polygon').forEach(p=>{
+      p.style.stroke='#1f6feb';
+      p.style.strokeWidth='2.4';
+    }));
+  });
+
+  svgEl.querySelectorAll('#provinceLabels text.provinceName').forEach(t=>{
+    const name=t.dataset.province;
+    if(name && provinceMatchesSearch(name)){
+      t.style.fill='#1f6feb';
+      t.style.fontSize='10px';
+    }
+  });
+}
+
 
 function selectProvince(name){
   selectedProvince=name;
@@ -1190,10 +1225,37 @@ function renderStats(){
   stats.innerHTML=`<div class="stat"><b>${dealerTotal}</b><span>Toplam bayi</span></div><div class="stat"><b>${cityTotal}</b><span>Bayisi olan il</span></div>`;
 }
 function renderSummary(){
-  const q=norm(globalSearch.value);const rows=[];
-  Object.entries(data.provinces).forEach(([province,p])=>(p.dealers||[]).forEach(d=>{const hay=norm([province,d.name,d.district,d.person,d.phone,d.address,d.note].join(' '));if(!q||hay.includes(q))rows.push({province,p,d})}));
-  summaryBody.innerHTML=rows.length?rows.map(({province,p,d})=>`<tr><td><span class="colorCell" style="background:${statusObj(p.status).color}"></span>${statusObj(p.status).label}</td><td><button class="btn small" data-province="${province}">${province}</button></td><td><strong>${esc(d.name)}</strong></td><td>${esc(d.district||'-')}</td><td>${esc(d.person||'-')}</td><td>${esc(d.phone||'-')}</td><td>${esc(d.address||'')}${d.note?'<br><span class="muted">'+esc(d.note)+'</span>':''}</td></tr>`).join(''):'<tr><td colspan="7" class="muted">Kayıt bulunamadı.</td></tr>';
-  lastSave.textContent=data.updatedAt?'Son kayıt: '+new Date(data.updatedAt).toLocaleString('tr-TR'):'Henüz kayıt yok'
+  const searchInput=document.getElementById('globalSearch');
+  const q=norm(searchInput ? searchInput.value : '');
+  const rows=[];
+
+  Object.entries(data.provinces).forEach(([province,p])=>{
+    const provinceHit=norm(province).includes(q);
+    (p.dealers||[]).forEach(d=>{
+      const hay=norm([province,d.name,d.district,d.person,d.phone,d.address,d.note].join(' '));
+      if(!q || provinceHit || hay.includes(q)) rows.push({province,p,d});
+    });
+  });
+
+  summaryBody.innerHTML=rows.length
+    ? rows.map(({province,p,d})=>`<tr>
+        <td><span class="colorCell" style="background:${statusObj(p.status).color}"></span>${statusObj(p.status).label}</td>
+        <td><button class="btn small provinceJumpBtn" data-province="${esc(province)}">${esc(province)}</button></td>
+        <td><strong>${esc(d.name)}</strong></td>
+        <td>${esc(d.district||'-')}</td>
+        <td>${esc(d.person||'-')}</td>
+        <td>${esc(d.phone||'-')}</td>
+        <td>${esc(d.address||'')}${d.note?'<br><span class="muted">'+esc(d.note)+'</span>':''}</td>
+      </tr>`).join('')
+    : '<tr><td colspan="7" class="muted">Kayıt bulunamadı.</td></tr>';
+
+  document.querySelectorAll('.provinceJumpBtn').forEach(btn=>{
+    btn.onclick=()=>selectProvince(btn.dataset.province);
+  });
+
+  if(window.lastSave){
+    lastSave.textContent=data.updatedAt?'Son kayıt: '+new Date(data.updatedAt).toLocaleString('tr-TR'):'Henüz kayıt yok';
+  }
 }
 
 function renderProvinceSummary(){
@@ -1204,21 +1266,36 @@ function renderProvinceSummary(){
     return;
   }
 
+  const searchInput=document.getElementById('globalSearch');
+  const q=norm(searchInput ? searchInput.value : '');
   const p=provinceData(selectedProvince);
-  const dealers=p.dealers||[];
+  const allDealers=p.dealers||[];
+  const dealers=allDealers.filter(d=>{
+    const hay=norm([selectedProvince,d.name,d.district,d.person,d.phone,d.address,d.note].join(' '));
+    return !q || norm(selectedProvince).includes(q) || hay.includes(q);
+  });
+
   provinceSummaryTitle.textContent=selectedProvince;
-  provinceSummaryMeta.textContent=dealers.length+' bayi kaydı';
+  provinceSummaryMeta.textContent=allDealers.length+' bayi kaydı' + (q ? ' / '+dealers.length+' eşleşme' : '');
 
   provinceSummaryBody.innerHTML=dealers.length
     ? dealers.map(d=>`<tr><td><strong>${esc(d.name)}</strong></td><td>${esc(d.district||'-')}</td><td>${esc(d.person||'-')}</td><td>${esc(d.phone||'-')}</td><td>${esc(d.address||'')}${d.note?'<br><span class="muted">'+esc(d.note)+'</span>':''}</td></tr>`).join('')
-    : '<tr><td colspan="5" class="muted">Bu ilde bayi kaydı yok.</td></tr>';
+    : '<tr><td colspan="5" class="muted">Aramaya uygun kayıt bulunamadı.</td></tr>';
 }
 
 function setSummaryTab(tab){
-  generalTabBtn.classList.toggle('active',tab==='general');
-  provinceTabBtn.classList.toggle('active',tab==='province');
-  generalTabPane.classList.toggle('active',tab==='general');
-  provinceTabPane.classList.toggle('active',tab==='province');
+  const generalBtn=document.getElementById('generalTabBtn');
+  const provinceBtn=document.getElementById('provinceTabBtn');
+  const generalPane=document.getElementById('generalTabPane');
+  const provincePane=document.getElementById('provinceTabPane');
+
+  if(generalBtn) generalBtn.classList.toggle('active',tab==='general');
+  if(provinceBtn) provinceBtn.classList.toggle('active',tab==='province');
+  if(generalPane) generalPane.classList.toggle('active',tab==='general');
+  if(provincePane) provincePane.classList.toggle('active',tab==='province');
+
+  if(tab==='general') renderSummary();
+  if(tab==='province') renderProvinceSummary();
 }
 
 function renderAll(){renderMapColors();renderStats();renderSummary();renderDealers();renderProvinceSummary()}
@@ -1290,9 +1367,9 @@ function bindEvents(){
     };
   }
 
-  if(searchEl) searchEl.oninput=renderSummary;
+  if(searchEl) searchEl.oninput=()=>{renderSummary();renderProvinceSummary();renderMapColors();highlightSearchMatches();};
 
-  document.querySelectorAll('.summaryTab').forEach(btn=>{
+  document.querySelectorAll('.tabBtn[data-tab]').forEach(btn=>{
     btn.onclick=()=>setSummaryTab(btn.dataset.tab);
   });
 }
@@ -1316,6 +1393,15 @@ window.addEventListener('load', function(){
       }
     }
   }, 1650);
+});
+</script>
+
+
+<script>
+window.addEventListener('load', function(){
+  document.querySelectorAll('.tabBtn[data-tab]').forEach(function(btn){
+    btn.onclick=function(){ setSummaryTab(btn.dataset.tab); };
+  });
 });
 </script>
 
