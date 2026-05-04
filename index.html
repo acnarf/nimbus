@@ -502,6 +502,15 @@ function initFirebaseOnline(){
         (userBadgeEl||userBadge).classList.remove('hidden');
         (signOutEl||signOutBtn).classList.remove('hidden');
         startRemoteSubscription();
+
+        // Main girişten sonra görünür olduğu için SVG il isimlerini burada yeniden hesapla.
+        // Aksi halde gizli main içinde getBBox ölçüleri bozulup il isimleri kaybolabiliyor.
+        setTimeout(()=>{
+          if(svgEl){
+            createProvinceLabels();
+            renderMapColors();
+          }
+        },250);
       }else{
         remoteReady=false;
         if(unsubscribeCompanyData){unsubscribeCompanyData();unsubscribeCompanyData=null}
@@ -808,6 +817,14 @@ async function initMap(){
     setupProvinces();
     createProvinceLabels();
     renderMapColors();
+
+    // SVG görünürlük durumuna bağlı ölçüm sorunları için ikinci deneme.
+    setTimeout(()=>{
+      if(svgEl){
+        createProvinceLabels();
+        renderMapColors();
+      }
+    },600);
   }catch(e){
     mapError.style.display='flex';
   }
