@@ -67,7 +67,7 @@ body.appReady main{
   transition:opacity .45s ease, transform .45s ease;
 }
 
-.authScreen{
+.authScreen{pointer-events:auto;
   position:fixed;
   inset:0;
   z-index:99995;
@@ -105,7 +105,7 @@ body.appReady main{
   font-size:14px;
   line-height:1.55;
 }
-.googleBtn{
+.googleBtn{position:relative;z-index:100000;pointer-events:auto;
   width:100%;
   border:0;
   border-radius:16px;
@@ -1118,7 +1118,7 @@ window.addEventListener('load', function(){
     document.body.classList.remove('appLoading');
     document.body.classList.add('appReady');
     var splash=document.getElementById('splashScreen');
-    if(splash) splash.classList.add('hide');
+    if(splash){ splash.classList.add('hide'); setTimeout(()=>{splash.style.display='none'},600); }
 
     // Firebase yanıtı gecikirse beyaz ekranda kalmasın; giriş ekranı görünür kalsın.
     if(document.body.classList.contains('authLocked')){
@@ -1130,6 +1130,63 @@ window.addEventListener('load', function(){
     }
   }, 1650);
 });
+</script>
+
+
+<script>
+(function(){
+  function attachGoogleLoginFallback(){
+    var btn=document.getElementById('googleLoginBtn');
+    var errorBox=document.getElementById('authError');
+    if(!btn || btn.dataset.fallbackReady==='1') return;
+    btn.dataset.fallbackReady='1';
+
+    btn.addEventListener('click', function(ev){
+      ev.preventDefault();
+      ev.stopPropagation();
+
+      function showError(msg){
+        if(errorBox){
+          errorBox.textContent=msg;
+          errorBox.classList.add('show');
+        }else{
+          alert(msg);
+        }
+      }
+
+      try{
+        if(!window.firebase){
+          showError('Firebase yüklenemedi. İnternet bağlantısını kontrol et.');
+          return;
+        }
+
+        if(!window.firebaseAuth){
+          if(!window.firebaseApp){
+            window.firebaseApp=firebase.initializeApp(firebaseConfig);
+          }
+          window.firebaseAuth=firebase.auth();
+        }
+
+        var provider=new firebase.auth.GoogleAuthProvider();
+
+        firebaseAuth.signInWithPopup(provider).catch(function(){
+          return firebaseAuth.signInWithRedirect(provider);
+        }).catch(function(err){
+          console.error(err);
+          showError('Google giriş başlatılamadı. Firebase Authorized domains içinde acnarf.github.io ekli mi kontrol et.');
+        });
+      }catch(err){
+        console.error(err);
+        showError('Google giriş başlatılamadı. Sayfayı yenileyip tekrar dene.');
+      }
+    }, true);
+  }
+
+  document.addEventListener('DOMContentLoaded', attachGoogleLoginFallback);
+  window.addEventListener('load', attachGoogleLoginFallback);
+  setTimeout(attachGoogleLoginFallback, 1000);
+  setTimeout(attachGoogleLoginFallback, 2500);
+})();
 </script>
 
 </body>
