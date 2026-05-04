@@ -67,7 +67,7 @@ body.appReady main{
   transition:opacity .45s ease, transform .45s ease;
 }
 
-.authScreen{pointer-events:auto;
+.authScreen{
   position:fixed;
   inset:0;
   z-index:99995;
@@ -534,12 +534,10 @@ function initFirebaseOnline(){
       setAuthError('');
       const provider=new firebase.auth.GoogleAuthProvider();
 
-      firebaseAuth.signInWithPopup(provider).catch(err=>{
-        console.warn(err);
-        return firebaseAuth.signInWithRedirect(provider);
-      }).catch(err=>{
+      // GitHub Pages ve Android WebView için popup yerine redirect kullanıyoruz.
+      firebaseAuth.signInWithRedirect(provider).catch(err=>{
         console.error(err);
-        setAuthError('Google giriş başlatılamadı. Firebase Authorized domains ve internet bağlantısını kontrol et.');
+        setAuthError('Google giriş başlatılamadı: ' + (err.code || err.message || 'Bilinmeyen hata'));
       });
     };
 
@@ -1130,63 +1128,6 @@ window.addEventListener('load', function(){
     }
   }, 1650);
 });
-</script>
-
-
-<script>
-(function(){
-  function attachGoogleLoginFallback(){
-    var btn=document.getElementById('googleLoginBtn');
-    var errorBox=document.getElementById('authError');
-    if(!btn || btn.dataset.fallbackReady==='1') return;
-    btn.dataset.fallbackReady='1';
-
-    btn.addEventListener('click', function(ev){
-      ev.preventDefault();
-      ev.stopPropagation();
-
-      function showError(msg){
-        if(errorBox){
-          errorBox.textContent=msg;
-          errorBox.classList.add('show');
-        }else{
-          alert(msg);
-        }
-      }
-
-      try{
-        if(!window.firebase){
-          showError('Firebase yüklenemedi. İnternet bağlantısını kontrol et.');
-          return;
-        }
-
-        if(!window.firebaseAuth){
-          if(!window.firebaseApp){
-            window.firebaseApp=firebase.initializeApp(firebaseConfig);
-          }
-          window.firebaseAuth=firebase.auth();
-        }
-
-        var provider=new firebase.auth.GoogleAuthProvider();
-
-        firebaseAuth.signInWithPopup(provider).catch(function(){
-          return firebaseAuth.signInWithRedirect(provider);
-        }).catch(function(err){
-          console.error(err);
-          showError('Google giriş başlatılamadı. Firebase Authorized domains içinde acnarf.github.io ekli mi kontrol et.');
-        });
-      }catch(err){
-        console.error(err);
-        showError('Google giriş başlatılamadı. Sayfayı yenileyip tekrar dene.');
-      }
-    }, true);
-  }
-
-  document.addEventListener('DOMContentLoaded', attachGoogleLoginFallback);
-  window.addEventListener('load', attachGoogleLoginFallback);
-  setTimeout(attachGoogleLoginFallback, 1000);
-  setTimeout(attachGoogleLoginFallback, 2500);
-})();
 </script>
 
 </body>
