@@ -227,6 +227,25 @@ body.authReady main{
   line-height:1.45;
 }
 .authError.show{display:block}
+.readOnlyNotice{
+  display:none;
+  align-items:center;
+  gap:8px;
+  color:#b45309;
+  background:#fff7ed;
+  border:1px solid #fed7aa;
+  border-radius:14px;
+  padding:9px 12px;
+  font-size:12px;
+  font-weight:800;
+}
+.readOnlyNotice.show{display:inline-flex}
+.btn.disabled,
+.btn:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+  transform:none!important;
+}
 
 @media(max-width:1160px){main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:680px){header,main{padding-left:14px;padding-right:14px}.brandHead{align-items:flex-start}.brandLogo{width:72px}.splashLogo{width:min(72vw,300px)}@keyframes splashLogoIntro{0%{transform:scale(.88);opacity:0}22%{transform:scale(1);opacity:1}62%{transform:scale(1);opacity:1}100%{transform:translate(calc(-50vw + 61px), calc(-50vh + 48px)) scale(.21);opacity:1}}.mapWrap{min-height:470px}.mapStage{height:430px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.search{width:100%;min-width:100%}#provinceLabels text.provinceName{font-size:8px}#provinceLabels text.dealerBadgeText{font-size:8px}}
 </style>
@@ -257,7 +276,7 @@ body.authReady main{
       <h1>Nimbus Gıda Yurtiçi Bayi Haritası</h1>
     </div>
   </div>
-  <div class="toolbar"><span class="userBadge hidden" id="userBadge"></span><button class="btn small hidden" id="signOutBtn">Çıkış</button><input id="globalSearch" class="search" placeholder="İl veya bayi ara..."><button class="btn" id="exportBtn">Dışa Aktar</button><label class="btn" for="importFile">İçe Aktar</label><input id="importFile" type="file" accept="application/json" class="hidden"><button class="btn danger" id="clearBtn">Temizle</button></div>
+  <div class="toolbar"><span class="userBadge hidden" id="userBadge"></span><span class="readOnlyNotice" id="readOnlyNotice">Sadece görüntüleme</span><button class="btn small hidden" id="signOutBtn">Çıkış</button><input id="globalSearch" class="search" placeholder="İl veya bayi ara..."><button class="btn" id="exportBtn">Dışa Aktar</button><label class="btn" for="importFile">İçe Aktar</label><input id="importFile" type="file" accept="application/json" class="hidden"><button class="btn danger" id="clearBtn">Temizle</button></div>
 </header>
 <main>
   <section class="card mapCard">
@@ -340,7 +359,7 @@ const firebaseConfig = {
   measurementId: "G-W87VTP1JJF"
 };
 
-let firebaseApp=null, firebaseAuth=null, firestoreDb=null, currentUser=null, unsubscribeCompanyData=null;
+let firebaseApp=null, firebaseAuth=null, firestoreDb=null, currentUser=null, unsubscribeCompanyData=null, canEdit=false;
 let remoteReady=false, applyingRemoteData=false, saveTimer=null;
 const COMPANY_DOC_PATH='companyData/bayiHaritasi';
 
@@ -425,6 +444,7 @@ function startRemoteSubscription(){
 }
 
 function saveRemoteData(){
+  if(!canEdit) return;
   if(!remoteReady || applyingRemoteData || !firestoreDb || !currentUser) return;
   clearTimeout(saveTimer);
   saveTimer=setTimeout(()=>{
@@ -441,6 +461,42 @@ function saveRemoteData(){
       setSyncStatus('Kayıt hatası',true);
     });
   },350);
+}
+
+
+function isAuthorizedEditor(user){
+  const email=(user && user.email ? user.email : '').toLowerCase();
+  return email.endsWith('@nimbusfood.com.tr');
+}
+
+function showNotAuthorizedWarning(){
+  alert('Yetkili değilsiniz. Bu hesap sadece bilgileri görüntüleyebilir; bayi ekleme, silme veya veri değiştirme yetkisi yok.');
+}
+
+function updateEditAccessUI(){
+  const readOnly=!canEdit;
+  if(window.readOnlyNotice) readOnlyNotice.classList.toggle('show',readOnly);
+
+  // Düzenleme aksiyonlarını görsel olarak pasifleştir.
+  [addDealerBtn, clearBtn].forEach(btn=>{
+    if(!btn) return;
+    btn.disabled=readOnly;
+    btn.classList.toggle('disabled',readOnly);
+  });
+
+  // İçeri aktarma veri değiştirir; yetkisiz kullanıcıda gizle.
+  const importLabel=document.querySelector('label[for="importFile"]');
+  if(importLabel){
+    importLabel.classList.toggle('disabled',readOnly);
+    importLabel.style.pointerEvents=readOnly ? 'none' : '';
+    importLabel.style.opacity=readOnly ? '.55' : '';
+  }
+}
+
+function requireEditAccess(){
+  if(canEdit) return true;
+  showNotAuthorizedWarning();
+  return false;
 }
 
 function initFirebaseOnline(){
@@ -497,6 +553,8 @@ function initFirebaseOnline(){
       currentUser=user;
 
       if(user){
+        canEdit=isAuthorizedEditor(user);
+        updateEditAccessUI();
         showAuthScreen(false);
         (userBadgeEl||userBadge).textContent=user.email || user.displayName || 'Google hesabı';
         (userBadgeEl||userBadge).classList.remove('hidden');
@@ -513,6 +571,8 @@ function initFirebaseOnline(){
         },250);
       }else{
         remoteReady=false;
+        canEdit=false;
+        updateEditAccessUI();
         if(unsubscribeCompanyData){unsubscribeCompanyData();unsubscribeCompanyData=null}
         (userBadgeEl||userBadge).classList.add('hidden');
         (signOutEl||signOutBtn).classList.add('hidden');
@@ -984,13 +1044,14 @@ function selectProvince(name){
 function v(id){return document.getElementById(id).value.trim()}
 function clearDealerForm(){['dealerName','dealerDistrict','dealerPerson','dealerPhone','dealerAddress','dealerNote'].forEach(id=>document.getElementById(id).value='')}
 function addDealer(){
+  if(!requireEditAccess()) return;
   if(!selectedProvince){alert('Önce haritadan bir il seç.');return}
   const d={id:Date.now().toString(36)+Math.random().toString(36).slice(2),name:v('dealerName'),district:v('dealerDistrict'),person:v('dealerPerson'),phone:v('dealerPhone'),address:v('dealerAddress'),note:v('dealerNote'),createdAt:new Date().toISOString()};
   if(!d.name){alert('Bayi adı girmen gerekiyor.');return}
   const p=provinceData(selectedProvince); p.dealers.push(d); p.status='hasDealer';
   clearDealerForm(); statusSelect.value=p.status; saveData();
 }
-function removeDealer(id){const p=provinceData(selectedProvince);p.dealers=p.dealers.filter(d=>d.id!==id);if(p.dealers.length===0)p.status='empty';saveData()}
+function removeDealer(id){if(!requireEditAccess()) return;const p=provinceData(selectedProvince);p.dealers=p.dealers.filter(d=>d.id!==id);if(p.dealers.length===0)p.status='empty';saveData()}
 function renderDealers(){
   const box=dealerList;
   if(!selectedProvince){box.innerHTML='<div class="emptyState">İl seçildiğinde bayi listesi burada görünür.</div>';dealerCount.textContent='0 kayıt';return}
@@ -1040,15 +1101,15 @@ function bindEvents(){
   addDealerBtn.onclick=addDealer;
   generalTabBtn.onclick=()=>setSummaryTab('general');
   provinceTabBtn.onclick=()=>setSummaryTab('province');
-  statusSelect.onchange=e=>{if(!selectedProvince){alert('Önce bir il seç.');e.target.value='empty';return}provinceData(selectedProvince).status=e.target.value;saveData()};
+  statusSelect.onchange=e=>{if(!requireEditAccess()){e.target.value=selectedProvince?provinceData(selectedProvince).status:'empty';return}if(!selectedProvince){alert('Önce bir il seç.');e.target.value='empty';return}provinceData(selectedProvince).status=e.target.value;saveData()};
   dealerList.onclick=e=>{const id=e.target.dataset.remove;if(id)removeDealer(id)};
   summaryBody.onclick=e=>{const p=e.target.dataset.province;if(p)selectProvince(p)};
   globalSearch.oninput=()=>{renderSummary();const q=norm(globalSearch.value);if(q&&provinceMap.size){const match=[...provinceMap.keys()].find(name=>norm(name).includes(q));if(match)selectProvince(match)}};
   exportBtn.onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='yurtici-bayi-haritasi-verileri.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-  importFile.onchange=e=>{const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const im=JSON.parse(r.result);if(!im.provinces)throw new Error();data=im;saveData();setSummaryTab('general');alert('Veriler içe aktarıldı.')}catch(err){alert('JSON dosyası okunamadı.')}};r.readAsText(f)};
-  clearBtn.onclick=()=>{if(confirm('Tüm bayi ve renk kayıtları silinsin mi?')){data={provinces:{},updatedAt:null};localStorage.removeItem(STORAGE_KEY);selectedProvince=null;provinceTitle.textContent='İl seçilmedi';selectedInfo.textContent='Haritadan bir il seç.';mapHint.textContent='İl sınırına veya il adına tıkla.';renderAll();setSummaryTab('general')}}
+  importFile.onchange=e=>{if(!requireEditAccess()){e.target.value='';return}const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const im=JSON.parse(r.result);if(!im.provinces)throw new Error();data=im;saveData();setSummaryTab('general');alert('Veriler içe aktarıldı.')}catch(err){alert('JSON dosyası okunamadı.')}};r.readAsText(f)};
+  clearBtn.onclick=()=>{if(!requireEditAccess()) return;if(confirm('Tüm bayi ve renk kayıtları silinsin mi?')){data={provinces:{},updatedAt:null};localStorage.removeItem(STORAGE_KEY);selectedProvince=null;provinceTitle.textContent='İl seçilmedi';selectedInfo.textContent='Haritadan bir il seç.';mapHint.textContent='İl sınırına veya il adına tıkla.';renderAll();setSummaryTab('general')}}
 }
-renderLegend();renderStatusSelect();bindEvents();renderAll();setSummaryTab('general');initMap();initFirebaseOnline();
+renderLegend();renderStatusSelect();bindEvents();renderAll();setSummaryTab('general');updateEditAccessUI();initMap();initFirebaseOnline();
 </script>
 
 <script>
