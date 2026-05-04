@@ -301,7 +301,7 @@ body.authReady main{
       </div>
       <button class="btn primary" id="addDealerBtn">Bayiyi Kaydet</button>
     </section>
-    <section class="card panel"><h2>Seçili İldeki Bayiler</h2><div class="selectedTxt" id="dealerCount">0 kayıt</div><div class="dealerList" id="dealerList"></div></section>
+    <section class="card panel"><h2 id="dealerPanelTitle">Seçili İldeki Bayiler</h2><div class="selectedTxt" id="dealerCount">0 kayıt</div><div class="dealerList" id="dealerList"></div></section>
   </aside>
   <section class="card summary">
     <div class="summaryTop">
@@ -994,6 +994,15 @@ async function initMap(){
     svgEl.setAttribute('preserveAspectRatio','xMidYMid meet');
     mapStage.innerHTML='';
     mapStage.appendChild(svgEl);
+
+    // Harita kartındaki boş gri alana tıklanınca il seçimi kalksın.
+    mapStage.addEventListener('click', ev=>{
+      const province = provinceFromEventTarget(ev.target);
+      if(!province && (ev.target === mapStage || ev.target === svgEl || ev.target.closest?.('svg'))){
+        clearProvinceSelection();
+      }
+    });
+
     initMapZoom();
 
     setupProvinces();
@@ -1227,6 +1236,29 @@ function highlightSearchMatches(){
 }
 
 
+
+function clearProvinceSelection(){
+  selectedProvince=null;
+
+  const dealerPanelTitle=document.getElementById('dealerPanelTitle');
+  if(dealerPanelTitle) dealerPanelTitle.textContent='Seçili İldeki Bayiler';
+
+  provinceTitle.textContent='İl seçilmedi';
+  selectedInfo.textContent='Haritadan bir il seç.';
+  mapHint.textContent='İl sınırına veya il adına tıkla.';
+  dealerCount.textContent='0 kayıt';
+
+  const dealerListEl=document.getElementById('dealerList');
+  if(dealerListEl){
+    dealerListEl.innerHTML='<div class="emptyState">İl seçildiğinde bayi listesi burada görünür.</div>';
+  }
+
+  renderMapColors();
+  renderProvinceSummary();
+  setSummaryTab('general');
+}
+
+
 function selectProvince(name){
   selectedProvince=name;
   provinceData(name);
@@ -1252,10 +1284,22 @@ function addDealer(){
 }
 function removeDealer(id){if(!requireEditAccess()) return;const p=provinceData(selectedProvince);p.dealers=p.dealers.filter(d=>d.id!==id);if(p.dealers.length===0)p.status='empty';saveData()}
 function renderDealers(){
-  const box=dealerList;
-  if(!selectedProvince){box.innerHTML='<div class="emptyState">İl seçildiğinde bayi listesi burada görünür.</div>';dealerCount.textContent='0 kayıt';return}
-  const arr=provinceData(selectedProvince).dealers; dealerCount.textContent=arr.length+' kayıt';
-  box.innerHTML=arr.length?arr.map(d=>`<div class="dealer"><div class="dealerTop"><div><div class="dealerName">${esc(d.name)}</div><div class="dealerMeta">${esc(d.district||'-')} · ${esc(d.person||'-')} · ${esc(d.phone||'-')}</div></div><button class="btn small danger" data-remove="${d.id}">Sil</button></div><div class="dealerMeta">${esc(d.address||'Adres yok')}${d.note?' · '+esc(d.note):''}</div></div>`).join(''):'<div class="emptyState">Bu ilde bayi kaydı yok.</div>'
+  const box=document.getElementById('dealerList');
+  const dealerPanelTitle=document.getElementById('dealerPanelTitle');
+  if(!selectedProvince){
+    if(dealerPanelTitle) dealerPanelTitle.textContent='Seçili İldeki Bayiler';
+    box.innerHTML='<div class="emptyState">İl seçildiğinde bayi listesi burada görünür.</div>';
+    dealerCount.textContent='0 kayıt';
+    return
+  }
+  if(dealerPanelTitle) dealerPanelTitle.textContent=selectedProvince + ' Bayileri';
+  const arr=provinceData(selectedProvince).dealers;
+  dealerCount.textContent=arr.length+' kayıt';
+  if(!arr.length){
+    box.innerHTML='<div class="emptyState">Bu ilde bayi kaydı yok.</div>';
+    return
+  }
+  box.innerHTML=arr.map(d=>`<div class="dealerItem"><div><strong>${esc(d.name||'-')}</strong><div class="muted">${esc(d.person||'-')} • ${esc(d.phone||'-')}</div><div class="muted">${esc(d.address||'Adres yok')}</div></div>${canEdit?`<button class="dangerBtn" onclick="removeDealer('${d.id}')">Sil</button>`:''}</div>`).join('');
 }
 function renderStats(){
   const ps=Object.entries(data.provinces);
