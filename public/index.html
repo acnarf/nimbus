@@ -122,7 +122,7 @@ body.appReady main{
   box-shadow:0 10px 22px rgba(33,74,130,.18);
 }
 .googleBtn:hover{filter:brightness(1.05)}
-.googleSignInButton{display:flex;justify-content:center;margin:0 auto 8px;min-height:44px}
+.googleSignInButton{display:flex;justify-content:center;margin:0 auto 8px;min-height:44px}.manualGoogleBtn{margin-top:8px}
 .googleIcon{
   width:24px;
   height:24px;
@@ -262,6 +262,10 @@ body.authReady main{
     <h2>Nimbus Gıda Bayi Haritası</h2>
     <p>Online bayi verilerini görmek ve güncellemek için Google hesabınla giriş yap.</p>
     <div id="googleSignInButton" class="googleSignInButton"></div>
+    <button class="googleBtn manualGoogleBtn" id="manualGoogleLoginBtn" type="button">
+      <span class="googleIcon">G</span>
+      Google ile giriş yap
+    </button>
     <div class="authNote">Giriş yapan kullanıcılar ortak şirket bayi veritabanını görür.</div>
     <div class="authError" id="authError"></div>
   </div>
@@ -500,6 +504,7 @@ function requireEditAccess(){
 
 function initFirebaseOnline(){
   const googleBtn=document.getElementById('googleSignInButton');
+  const manualGoogleBtn=document.getElementById('manualGoogleLoginBtn');
   const errorBox=document.getElementById('authError');
   const authBox=document.getElementById('authScreen');
   const userBadgeEl=document.getElementById('userBadge');
@@ -529,6 +534,23 @@ function initFirebaseOnline(){
 
     firebaseAuth.setPersistence(firebase.auth.Auth.Persistence.LOCAL);
 
+    function firebasePopupFallback(){
+      setAuthError('');
+      const provider = new firebase.auth.GoogleAuthProvider();
+      firebaseAuth.signInWithPopup(provider).catch(err=>{
+        console.warn(err);
+        if(err && err.code === 'auth/popup-blocked'){
+          setAuthError('Popup engellendi. Tarayıcıda bu site için popup izni verip tekrar dene.');
+        }else if(err && err.code === 'auth/unauthorized-domain'){
+          setAuthError('Bu domain Firebase Authorized domains içinde yok. nimbus-bayi-haritasi.firebaseapp.com ve nimbus-bayi-haritasi.web.app ekli olmalı.');
+        }else if(err && err.code === 'auth/popup-closed-by-user'){
+          setAuthError('Google giriş penceresi kapatıldı. Tekrar dene.');
+        }else{
+          setAuthError('Google giriş başarısız: ' + (err.code || err.message || 'Bilinmeyen hata'));
+        }
+      });
+    }
+
     function renderGoogleIdentityButton(){
       if(!window.google || !google.accounts || !google.accounts.id){
         setTimeout(renderGoogleIdentityButton,300);
@@ -537,6 +559,8 @@ function initFirebaseOnline(){
 
       google.accounts.id.initialize({
         client_id: "979034131958-vh35hm2lkkv18hhkdgeg81dsfpdc9emrm.apps.googleusercontent.com",
+        auto_select: false,
+        cancel_on_tap_outside: false,
         callback: function(response){
           setAuthError('');
           try{
@@ -552,14 +576,46 @@ function initFirebaseOnline(){
         }
       });
 
-      google.accounts.id.renderButton(googleBtn, {
-        theme: "outline",
-        size: "large",
-        type: "standard",
-        shape: "pill",
-        text: "signin_with",
-        width: 320
-      });
+      try{
+        google.accounts.id.renderButton(googleBtn, {
+          theme: "outline",
+          size: "large",
+          type: "standard",
+          shape: "pill",
+          text: "signin_with",
+          width: 320
+        });
+      }catch(err){
+        console.warn(err);
+      }
+
+      if(manualGoogleBtn){
+        manualGoogleBtn.onclick=()=>{
+          setAuthError('');
+          let promptShown=false;
+
+          try{
+            google.accounts.id.prompt(notification=>{
+              promptShown=true;
+              if(notification.isNotDisplayed && notification.isNotDisplayed()){
+                firebasePopupFallback();
+              }else if(notification.isSkippedMoment && notification.isSkippedMoment()){
+                firebasePopupFallback();
+              }
+            });
+
+            // Prompt görünmezse Firebase popup fallback.
+            setTimeout(()=>{
+              if(!currentUser && !promptShown){
+                firebasePopupFallback();
+              }
+            },1200);
+          }catch(err){
+            console.warn(err);
+            firebasePopupFallback();
+          }
+        };
+      }
     }
 
     renderGoogleIdentityButton();
