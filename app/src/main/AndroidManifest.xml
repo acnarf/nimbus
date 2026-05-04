@@ -5,7 +5,7 @@
 
     <application
         android:allowBackup="true"
-        android:label="Nimbus Bayi Haritası"
+        android:label="Nimbus Gıda"
         android:theme="@style/AppTheme"
         android:usesCleartextTraffic="false"
         android:supportsRtl="true">
