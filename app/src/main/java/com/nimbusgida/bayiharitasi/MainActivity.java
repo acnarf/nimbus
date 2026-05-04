@@ -2,16 +2,17 @@ package com.nimbusgida.bayiharitasi;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.webkit.CookieManager;
 import android.webkit.WebSettings;
 import android.webkit.WebView;
 import android.webkit.WebViewClient;
 import android.webkit.WebChromeClient;
 import android.view.ViewGroup;
-import android.view.View;
 import android.widget.FrameLayout;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private static final String APP_URL = "https://nimbus-bayi-haritasi.firebaseapp.com/?app=android_v3";
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -31,16 +32,19 @@ public class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
-        settings.setSupportZoom(true);
-        settings.setBuiltInZoomControls(true);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
         settings.setDisplayZoomControls(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+
+        CookieManager.getInstance().setAcceptCookie(true);
+        CookieManager.getInstance().setAcceptThirdPartyCookies(webView, true);
 
         webView.setWebViewClient(new WebViewClient());
         webView.setWebChromeClient(new WebChromeClient());
 
         setContentView(webView);
-        webView.loadUrl("file:///android_asset/index.html");
+        webView.loadUrl(APP_URL);
     }
 
     @Override
