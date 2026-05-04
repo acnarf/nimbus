@@ -70,7 +70,7 @@ body.appReady main{
 .authScreen{
   position:fixed;
   inset:0;
-  z-index:99990;
+  z-index:99995;
   background:linear-gradient(180deg,#ffffff,#f4f7fb);
   display:flex;
   align-items:center;
@@ -429,6 +429,16 @@ function saveRemoteData(){
 }
 
 function initFirebaseOnline(){
+  setTimeout(()=>{
+    if(document.body.classList.contains('authLocked') && !currentUser){
+      showAuthScreen(true);
+      if(window.authError){
+        authError.textContent='Google giriş ekranı bekleniyor. Eğer buton görünmüyorsa internet bağlantısını veya Firebase Authorized domains ayarını kontrol et.';
+        authError.classList.add('show');
+      }
+    }
+  },3000);
+
   try{
     firebaseApp=firebase.initializeApp(firebaseConfig);
     firebaseAuth=firebase.auth();
@@ -1007,6 +1017,12 @@ window.addEventListener('load', function(){
     document.body.classList.add('appReady');
     var splash=document.getElementById('splashScreen');
     if(splash) splash.classList.add('hide');
+
+    // Firebase yanıtı gecikirse beyaz ekranda kalmasın; giriş ekranı görünür kalsın.
+    if(document.body.classList.contains('authLocked')){
+      var auth=document.getElementById('authScreen');
+      if(auth) auth.classList.remove('hidden');
+    }
   }, 1650);
 });
 </script>
