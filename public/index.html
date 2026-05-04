@@ -576,7 +576,7 @@ function updateEditAccessUI(){
   if(window.readOnlyNotice) readOnlyNotice.classList.toggle('show',readOnly);
 
   // Düzenleme aksiyonlarını görsel olarak pasifleştir.
-  [window.addDealerBtn, window.clearBtn].forEach(btn=>{
+  [document.getElementById('addDealerBtn'), document.getElementById('clearBtn')].forEach(btn=>{
     if(!btn) return;
     btn.disabled=readOnly;
     btn.classList.toggle('disabled',readOnly);
