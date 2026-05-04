@@ -983,8 +983,8 @@ async function initMap(){
   try{
     const html=await loadSvgText();
     const doc=new DOMParser().parseFromString(html,'text/html');
-    const svg=doc.querySelector('#svg-turkiye-haritasi');
-    if(!svg) throw new Error('SVG bulunamadı');
+    const svg=doc.querySelector('svg#svg-turkiye-haritasi') || doc.querySelector('svg');
+    if(!svg) throw new Error('SVG etiketi bulunamadı');
 
     svgEl=svg;
     svgEl.removeAttribute('width'); svgEl.removeAttribute('height');
