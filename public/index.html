@@ -1164,6 +1164,45 @@ function provinceMatchesSearch(name){
   return !!(p && (p.dealers||[]).some(d=>norm([name,d.name,d.district,d.person,d.phone,d.address,d.note].join(' ')).includes(q)));
 }
 
+
+function firstSearchMatchingProvince(){
+  const searchInput=document.getElementById('globalSearch');
+  const q=norm(searchInput ? searchInput.value : '');
+  if(!q) return null;
+
+  // Önce il adında eşleşme ara.
+  for(const name of provinceMap.keys()){
+    if(norm(name).includes(q)) return name;
+  }
+
+  // Sonra bayi bilgileri içinde eşleşme ara.
+  for(const [name,p] of Object.entries(data.provinces)){
+    if((p.dealers||[]).some(d=>norm([name,d.name,d.district,d.person,d.phone,d.address,d.note].join(' ')).includes(q))){
+      return name;
+    }
+  }
+
+  return null;
+}
+
+function openSearchResultProvince(){
+  const searchInput=document.getElementById('globalSearch');
+  const q=norm(searchInput ? searchInput.value : '');
+  if(!q) return;
+
+  const match=firstSearchMatchingProvince();
+  if(!match) return;
+
+  // selectProvince zaten İl Özeti tabını açıyor.
+  if(selectedProvince!==match){
+    selectProvince(match);
+  }else{
+    renderProvinceSummary();
+    setSummaryTab('province');
+  }
+}
+
+
 function highlightSearchMatches(){
   if(!svgEl) return;
   const searchInput=document.getElementById('globalSearch');
@@ -1367,7 +1406,7 @@ function bindEvents(){
     };
   }
 
-  if(searchEl) searchEl.oninput=()=>{renderSummary();renderProvinceSummary();renderMapColors();highlightSearchMatches();};
+  if(searchEl) searchEl.oninput=()=>{renderSummary();renderMapColors();highlightSearchMatches();openSearchResultProvince();};
 
   document.querySelectorAll('.tabBtn[data-tab]').forEach(btn=>{
     btn.onclick=()=>setSummaryTab(btn.dataset.tab);
