@@ -997,8 +997,11 @@ async function initMap(){
 
     // Harita kartındaki boş gri alana tıklanınca il seçimi kalksın.
     mapStage.addEventListener('click', ev=>{
+      if(!selectedProvince) return;
       const province = provinceFromEventTarget(ev.target);
-      if(!province && (ev.target === mapStage || ev.target === svgEl || ev.target.closest?.('svg'))){
+      const clickedLabel = ev.target.closest && ev.target.closest('#provinceLabels');
+      const clickedBadge = ev.target.closest && ev.target.closest('.dealerBadge');
+      if(!province && !clickedLabel && !clickedBadge){
         clearProvinceSelection();
       }
     });
@@ -1382,6 +1385,27 @@ function setSummaryTab(tab){
 }
 
 function renderAll(){renderMapColors();renderStats();renderSummary();renderDealers();renderProvinceSummary()}
+
+function bindMapEmptyAreaClear(){
+  const wrap=document.querySelector('.mapWrap');
+  if(!wrap || wrap.dataset.clearReady==='1') return;
+  wrap.dataset.clearReady='1';
+
+  wrap.addEventListener('click', ev=>{
+    if(!selectedProvince) return;
+
+    // İl path'i, il label'ı veya bayi sayacı tıklanıyorsa seçimi kaldırma.
+    const province = provinceFromEventTarget(ev.target);
+    const clickedLabel = ev.target.closest && ev.target.closest('#provinceLabels');
+    const clickedBadge = ev.target.closest && ev.target.closest('.dealerBadge');
+    if(province || clickedLabel || clickedBadge) return;
+
+    // SVG içindeki path/polygon dışındaki boş alanlar ve mapWrap arka planı.
+    clearProvinceSelection();
+  });
+}
+
+
 function bindEvents(){
   const saveBtn=document.getElementById('addDealerBtn');
   const statusEl=document.getElementById('statusSelect');
@@ -1455,6 +1479,8 @@ function bindEvents(){
   document.querySelectorAll('.tabBtn[data-tab]').forEach(btn=>{
     btn.onclick=()=>setSummaryTab(btn.dataset.tab);
   });
+
+  bindMapEmptyAreaClear();
 }
 renderLegend();renderStatusSelect();bindEvents();renderAll();setSummaryTab('general');updateEditAccessUI();initMap();initFirebaseOnline();
 </script>
