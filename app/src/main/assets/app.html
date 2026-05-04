@@ -2,7 +2,7 @@
 <html lang="tr">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1, maximum-scale=5, user-scalable=yes" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
 <title>Nimbus Gıda Yurtiçi Bayi Haritası</title>
 <style>
 :root{
@@ -248,6 +248,14 @@ body.authReady main{
 }
 
 @media(max-width:1160px){main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(2,1fr)}}@media(max-width:680px){header,main{padding-left:14px;padding-right:14px}.brandHead{align-items:flex-start}.brandLogo{width:72px}.splashLogo{width:min(72vw,300px)}@keyframes splashLogoIntro{0%{transform:scale(.88);opacity:0}22%{transform:scale(1);opacity:1}62%{transform:scale(1);opacity:1}100%{transform:translate(calc(-50vw + 61px), calc(-50vh + 48px)) scale(.21);opacity:1}}.mapWrap{min-height:470px}.mapStage{height:430px}.grid{grid-template-columns:1fr}.stats{grid-template-columns:1fr}.search{width:100%;min-width:100%}#provinceLabels text.provinceName{font-size:8px}#provinceLabels text.dealerBadgeText{font-size:8px}}
+
+/* Native APK zoom/pan düzeltmesi */
+.mapStage, .mapStage svg, .mapStage *{
+  touch-action:none;
+  -webkit-user-select:none;
+  user-select:none;
+}
+
 </style>
 </head>
 <body class="appLoading appReady">
@@ -927,43 +935,122 @@ function initMapZoom(){
   currentViewBox={...originalViewBox};
   setSvgViewBox(currentViewBox);
 
+  let lastTouchDistance=0;
+  let lastTouchCenter=null;
+  let lastPanPoint=null;
+  let touchMoved=false;
+  let touchTapProvince=null;
+
+  function touchDistance(t1,t2){
+    const dx=t1.clientX-t2.clientX;
+    const dy=t1.clientY-t2.clientY;
+    return Math.hypot(dx,dy);
+  }
+
+  function touchCenter(t1,t2){
+    return {
+      x:(t1.clientX+t2.clientX)/2,
+      y:(t1.clientY+t2.clientY)/2
+    };
+  }
+
+  mapStage.addEventListener('touchstart',ev=>{
+    if(ev.touches.length===1){
+      const t=ev.touches[0];
+      lastPanPoint={x:t.clientX,y:t.clientY};
+      touchMoved=false;
+      touchTapProvince=provinceAtClientPoint(t.clientX,t.clientY) || provinceFromPoint(t.clientX,t.clientY);
+    }
+
+    if(ev.touches.length===2){
+      ev.preventDefault();
+      const t1=ev.touches[0];
+      const t2=ev.touches[1];
+      lastTouchDistance=touchDistance(t1,t2);
+      lastTouchCenter=touchCenter(t1,t2);
+      touchMoved=true;
+      blockNextClick=true;
+    }
+  },{passive:false});
+
+  mapStage.addEventListener('touchmove',ev=>{
+    if(ev.touches.length===2){
+      ev.preventDefault();
+
+      const t1=ev.touches[0];
+      const t2=ev.touches[1];
+      const dist=touchDistance(t1,t2);
+      const center=touchCenter(t1,t2);
+
+      if(lastTouchDistance>0){
+        const factor=dist/lastTouchDistance;
+        zoomSvgAt(center.x,center.y,factor);
+      }
+
+      if(lastTouchCenter && mapZoom>1){
+        panSvgByScreenDelta(center.x-lastTouchCenter.x, center.y-lastTouchCenter.y);
+      }
+
+      lastTouchDistance=dist;
+      lastTouchCenter=center;
+      touchMoved=true;
+      blockNextClick=true;
+      return;
+    }
+
+    if(ev.touches.length===1 && mapZoom>1 && lastPanPoint){
+      ev.preventDefault();
+
+      const t=ev.touches[0];
+      const dx=t.clientX-lastPanPoint.x;
+      const dy=t.clientY-lastPanPoint.y;
+
+      if(Math.abs(dx)>2 || Math.abs(dy)>2){
+        panSvgByScreenDelta(dx,dy);
+        lastPanPoint={x:t.clientX,y:t.clientY};
+        touchMoved=true;
+        blockNextClick=true;
+      }
+    }
+  },{passive:false});
+
+  mapStage.addEventListener('touchend',ev=>{
+    if(ev.touches.length===0){
+      if(!touchMoved && touchTapProvince){
+        selectProvince(touchTapProvince);
+        blockNextClick=true;
+      }
+
+      lastTouchDistance=0;
+      lastTouchCenter=null;
+      lastPanPoint=null;
+      touchTapProvince=null;
+
+      setTimeout(()=>{blockNextClick=false; touchMoved=false; didDrag=false},180);
+    }
+
+    if(ev.touches.length===1){
+      const t=ev.touches[0];
+      lastPanPoint={x:t.clientX,y:t.clientY};
+      lastTouchDistance=0;
+      lastTouchCenter=null;
+    }
+  },{passive:false});
+
+  // Masaüstü / mouse için mevcut pointer davranışı.
   mapStage.addEventListener('pointerdown',ev=>{
+    if(ev.pointerType==='touch') return;
     activePointers.set(ev.pointerId,ev);
     mapStage.setPointerCapture?.(ev.pointerId);
     didDrag=false;
     tapStartProvince=provinceAtClientPoint(ev.clientX,ev.clientY) || provinceFromEventTarget(ev.target) || provinceFromPoint(ev.clientX,ev.clientY);
-
-    if(activePointers.size===1){
-      dragStart={x:ev.clientX,y:ev.clientY};
-    }
-
-    if(activePointers.size===2){
-      const pts=[...activePointers.values()];
-      lastPinchDistance=pointerDistance(pts[0],pts[1]);
-    }
+    dragStart={x:ev.clientX,y:ev.clientY};
   });
 
   mapStage.addEventListener('pointermove',ev=>{
+    if(ev.pointerType==='touch') return;
     if(!activePointers.has(ev.pointerId)) return;
     activePointers.set(ev.pointerId,ev);
-
-    if(activePointers.size===2){
-      ev.preventDefault();
-      const pts=[...activePointers.values()];
-      const dist=pointerDistance(pts[0],pts[1]);
-      const centerX=(pts[0].clientX+pts[1].clientX)/2;
-      const centerY=(pts[0].clientY+pts[1].clientY)/2;
-
-      if(lastPinchDistance>0){
-        const factor=dist/lastPinchDistance;
-        zoomSvgAt(centerX,centerY,factor);
-      }
-
-      lastPinchDistance=dist;
-      didDrag=true;
-      blockNextClick=true;
-      return;
-    }
 
     if(activePointers.size===1 && mapZoom>1 && dragStart){
       ev.preventDefault();
@@ -979,10 +1066,10 @@ function initMapZoom(){
   });
 
   function endPointer(ev){
+    if(ev.pointerType==='touch') return;
+
     const hitProvince=provinceAtClientPoint(ev.clientX,ev.clientY) || provinceFromEventTarget(ev.target) || provinceFromPoint(ev.clientX,ev.clientY) || tapStartProvince;
 
-    // Temiz dokunuşta doğrudan geometrik hit-test ile ili seç.
-    // Bu yöntem Android WebView'de click/pointer target bozulsa bile çalışır.
     if(!didDrag && activePointers.size===1 && hitProvince){
       selectProvince(hitProvince);
       blockNextClick=true;
@@ -991,7 +1078,6 @@ function initMapZoom(){
     }
 
     activePointers.delete(ev.pointerId);
-    lastPinchDistance=0;
     dragStart=null;
     tapStartProvince=null;
     setTimeout(()=>{blockNextClick=false; didDrag=false},160);
@@ -1011,27 +1097,13 @@ function initMapZoom(){
     resetMapZoom();
   });
 
-
-  mapStage.addEventListener('touchend',ev=>{
-    if(blockNextClick || didDrag) return;
-    const t=ev.changedTouches && ev.changedTouches[0];
-    if(!t) return;
-    const p=provinceAtClientPoint(t.clientX,t.clientY);
-    if(p){
-      ev.stopPropagation();
-      ev.preventDefault();
-      selectProvince(p);
-      blockNextClick=true;
-      setTimeout(()=>{blockNextClick=false},160);
-    }
-  },{passive:false});
-
   mapStage.addEventListener('click',ev=>{
-    if(blockNextClick || didDrag){
+    if(blockNextClick || didDrag || touchMoved){
       ev.stopPropagation();
       ev.preventDefault();
       blockNextClick=false;
       didDrag=false;
+      touchMoved=false;
       return;
     }
 
