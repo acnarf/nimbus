@@ -394,7 +394,42 @@ window.nimbusLoginClick = function(ev){
     const provider = new firebase.auth.GoogleAuthProvider();
     provider.setCustomParameters({ prompt: 'select_account' });
 
-    auth.signInWithPopup(provider).catch(err=>{
+    auth.signInWithPopup(provider).then(result=>{
+      const user = result && result.user ? result.user : auth.currentUser;
+      if(!user){
+        showError('Google girişi tamamlandı ama kullanıcı bilgisi alınamadı. Sayfayı yenileyip tekrar dene.');
+        if(btn) btn.innerHTML = '<span class="googleIcon">G</span> Google ile giriş yap';
+        return;
+      }
+
+      currentUser = user;
+      canEdit = isAuthorizedEditor(user);
+      updateEditAccessUI();
+
+      const userBadgeEl = document.getElementById('userBadge');
+      const signOutEl = document.getElementById('signOutBtn');
+
+      if(userBadgeEl){
+        userBadgeEl.textContent = user.email || user.displayName || 'Google hesabı';
+        userBadgeEl.classList.remove('hidden');
+      }
+      if(signOutEl) signOutEl.classList.remove('hidden');
+
+      showAuthScreen(false);
+
+      if(!firestoreDb){
+        firestoreDb = firebase.firestore();
+      }
+
+      startRemoteSubscription();
+
+      setTimeout(()=>{
+        if(svgEl){
+          createProvinceLabels();
+          renderMapColors();
+        }
+      },250);
+    }).catch(err=>{
       console.error(err);
       if(err && err.code === 'auth/popup-blocked'){
         showError('Popup engellendi. Tarayıcıda bu site için popup izni ver.');
@@ -597,6 +632,21 @@ function initFirebaseOnline(){
         firebaseAuth.signOut();
       };
     }
+
+    // Popup tamamlandıktan sonra auth state bazı tarayıcılarda gecikebilir.
+    setTimeout(()=>{
+      const user = firebaseAuth.currentUser;
+      if(user && document.body.classList.contains('authLocked')){
+        currentUser=user;
+        canEdit=isAuthorizedEditor(user);
+        updateEditAccessUI();
+        showAuthScreen(false);
+        (userBadgeEl||userBadge).textContent=user.email || user.displayName || 'Google hesabı';
+        (userBadgeEl||userBadge).classList.remove('hidden');
+        (signOutEl||signOutBtn).classList.remove('hidden');
+        startRemoteSubscription();
+      }
+    },1200);
 
     firebaseAuth.onAuthStateChanged(user=>{
       currentUser=user;
