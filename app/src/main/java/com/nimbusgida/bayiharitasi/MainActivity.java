@@ -31,7 +31,8 @@ public class MainActivity extends Activity {
         settings.setAllowContentAccess(true);
         settings.setLoadWithOverviewMode(true);
         settings.setUseWideViewPort(true);
-        settings.setBuiltInZoomControls(false);
+        settings.setSupportZoom(true);
+        settings.setBuiltInZoomControls(true);
         settings.setDisplayZoomControls(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
 
