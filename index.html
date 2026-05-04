@@ -386,10 +386,18 @@ window.nimbusGoogleLogin = function(ev){
     var auth = firebase.auth();
     var provider = new firebase.auth.GoogleAuthProvider();
 
-    // Popup bazı tarayıcılarda engellenebildiği için redirect kullanıyoruz.
-    auth.signInWithRedirect(provider).catch(function(err){
+    // Buton artık tıklandığı için popup yöntemi daha stabil.
+    auth.signInWithPopup(provider).catch(function(err){
       console.error(err);
-      showError('Google giriş başlatılamadı: ' + (err.code || err.message || 'Bilinmeyen hata'));
+      if(err && err.code === 'auth/popup-blocked'){
+        showError('Popup engellendi. Tarayıcıda bu site için popup izni verip tekrar dene.');
+      }else if(err && err.code === 'auth/unauthorized-domain'){
+        showError('Bu domain Firebase Authorized domains içinde yok. acnarf.github.io ekli olmalı.');
+      }else if(err && err.code === 'auth/popup-closed-by-user'){
+        showError('Google giriş penceresi kapatıldı. Tekrar dene.');
+      }else{
+        showError('Google giriş başlatılamadı: ' + (err.code || err.message || 'Bilinmeyen hata'));
+      }
     });
   }catch(err){
     console.error(err);
