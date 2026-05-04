@@ -456,6 +456,9 @@ let firebaseApp=null, firebaseAuth=null, firestoreDb=null, currentUser=null, uns
 let remoteReady=false, applyingRemoteData=false, saveTimer=null;
 const COMPANY_DOC_PATH='companyData/bayiHaritasi';
 
+function el(id){return document.getElementById(id)}
+
+
 const SVG_SOURCES=[
   '/turkiye-haritasi.html',
   'turkiye-haritasi.html',
@@ -1220,16 +1223,78 @@ function setSummaryTab(tab){
 
 function renderAll(){renderMapColors();renderStats();renderSummary();renderDealers();renderProvinceSummary()}
 function bindEvents(){
-  addDealerBtn.onclick=addDealer;
-  generalTabBtn.onclick=()=>setSummaryTab('general');
-  provinceTabBtn.onclick=()=>setSummaryTab('province');
-  statusSelect.onchange=e=>{if(!requireEditAccess()){e.target.value=selectedProvince?provinceData(selectedProvince).status:'empty';return}if(!selectedProvince){alert('Önce bir il seç.');e.target.value='empty';return}provinceData(selectedProvince).status=e.target.value;saveData()};
-  dealerList.onclick=e=>{const id=e.target.dataset.remove;if(id)removeDealer(id)};
-  summaryBody.onclick=e=>{const p=e.target.dataset.province;if(p)selectProvince(p)};
-  globalSearch.oninput=()=>{renderSummary();const q=norm(globalSearch.value);if(q&&provinceMap.size){const match=[...provinceMap.keys()].find(name=>norm(name).includes(q));if(match)selectProvince(match)}};
-  exportBtn.onclick=()=>{const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='yurtici-bayi-haritasi-verileri.json';a.click();setTimeout(()=>URL.revokeObjectURL(a.href),1000)};
-  importFile.onchange=e=>{if(!requireEditAccess()){e.target.value='';return}const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=()=>{try{const im=JSON.parse(r.result);if(!im.provinces)throw new Error();data=im;saveData();setSummaryTab('general');alert('Veriler içe aktarıldı.')}catch(err){alert('JSON dosyası okunamadı.')}};r.readAsText(f)};
-  clearBtn.onclick=()=>{if(!requireEditAccess()) return;if(confirm('Tüm bayi ve renk kayıtları silinsin mi?')){data={provinces:{},updatedAt:null};localStorage.removeItem(STORAGE_KEY);selectedProvince=null;provinceTitle.textContent='İl seçilmedi';selectedInfo.textContent='Haritadan bir il seç.';mapHint.textContent='İl sınırına veya il adına tıkla.';renderAll();setSummaryTab('general')}}
+  const saveBtn=document.getElementById('addDealerBtn');
+  const statusEl=document.getElementById('statusSelect');
+  const exportBtnEl=document.getElementById('exportBtn');
+  const importFileEl=document.getElementById('importFile');
+  const clearBtnEl=document.getElementById('clearBtn');
+  const searchEl=document.getElementById('globalSearch');
+
+  if(saveBtn) saveBtn.onclick=addDealer;
+
+  if(statusEl){
+    statusEl.onchange=e=>{
+      if(!requireEditAccess()){
+        e.target.value=selectedProvince?provinceData(selectedProvince).status:'empty';
+        return;
+      }
+      if(!selectedProvince){
+        alert('Önce bir il seç.');
+        e.target.value='empty';
+        return;
+      }
+      provinceData(selectedProvince).status=e.target.value;
+      saveData();
+    };
+  }
+
+  if(exportBtnEl){
+    exportBtnEl.onclick=()=>{
+      const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});
+      const a=document.createElement('a');
+      a.href=URL.createObjectURL(blob);
+      a.download='nimbus-bayi-haritasi.json';
+      a.click();
+      URL.revokeObjectURL(a.href);
+    };
+  }
+
+  if(importFileEl){
+    importFileEl.onchange=e=>{
+      if(!requireEditAccess()){
+        e.target.value='';
+        return;
+      }
+      const f=e.target.files[0];
+      if(!f)return;
+      const r=new FileReader();
+      r.onload=()=>{
+        try{
+          data=JSON.parse(r.result);
+          saveData();
+        }catch(err){
+          alert('Geçersiz JSON dosyası');
+        }
+      };
+      r.readAsText(f);
+    };
+  }
+
+  if(clearBtnEl){
+    clearBtnEl.onclick=()=>{
+      if(!requireEditAccess()) return;
+      if(confirm('Tüm bayi ve renk kayıtları silinsin mi?')){
+        data={provinces:{},updatedAt:null};
+        saveData();
+      }
+    };
+  }
+
+  if(searchEl) searchEl.oninput=renderSummary;
+
+  document.querySelectorAll('.summaryTab').forEach(btn=>{
+    btn.onclick=()=>setSummaryTab(btn.dataset.tab);
+  });
 }
 renderLegend();renderStatusSelect();bindEvents();renderAll();setSummaryTab('general');updateEditAccessUI();initMap();initFirebaseOnline();
 </script>
